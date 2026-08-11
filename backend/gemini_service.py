@@ -1,57 +1,104 @@
 """
 gemini_service.py — Voice-to-JSON extraction and LLM precautionary guidance.
+Uses the new google-genai SDK which supports AQ. format API keys.
 """
 import os
 import json
 import tempfile
-import google.generativeai as genai
+import asyncio
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-genai.configure(api_key=GEMINI_API_KEY)
+
+# Use the new google-genai SDK that supports AQ. keys
+from google import genai
+from google.genai import types
+
+_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+
+# gemini-flash-latest supports audio/multimodal inputs via File API
+AUDIO_MODEL = "gemini-flash-latest"
+# gemini-3.5-flash for text-only tasks (precautions)
+TEXT_MODEL = "gemini-3.5-flash"
+
 
 
 async def parse_audio_to_vitals(audio_bytes: bytes, mime_type: str = "audio/webm") -> dict:
     """
-    Upload audio to Gemini 1.5 Flash and extract 6 patient vitals as JSON.
+    Upload audio to Gemini (multimodal model) and extract 6 patient vitals as JSON.
     Returns dict with keys: Age, SystolicBP, DiastolicBP, BS, BodyTemp, HeartRate
     """
-    if not GEMINI_API_KEY:
+    if not GEMINI_API_KEY or not _client:
         raise ValueError("GEMINI_API_KEY is not set. Add it to .env file.")
 
-    # Write audio to a temp file so genai can upload it
-    suffix = ".webm" if "webm" in mime_type else ".wav"
+    # Determine correct suffix and mime type for the file
+    if "ogg" in mime_type:
+        suffix, upload_mime = ".ogg", "audio/ogg"
+    elif "mp4" in mime_type or "mp4a" in mime_type:
+        suffix, upload_mime = ".mp4", "audio/mp4"
+    elif "webm" in mime_type:
+        suffix, upload_mime = ".webm", "audio/webm"
+    else:
+        suffix, upload_mime = ".wav", "audio/wav"
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(audio_bytes)
         tmp_path = tmp.name
 
     try:
-        uploaded = genai.upload_file(path=tmp_path, mime_type=mime_type)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content([
-            uploaded,
-            (
-                "Listen to the provided Urdu or English audio carefully. "
-                "Extract the following 6 patient vitals and return ONLY a single valid raw JSON object "
-                "with exactly these keys: "
-                "{\"Age\": <int>, \"SystolicBP\": <int>, \"DiastolicBP\": <int>, "
-                "\"BS\": <float>, \"BodyTemp\": <float>, \"HeartRate\": <int>}. "
-                "Do not include any explanation, markdown, or extra text. Return ONLY the JSON."
-            )
-        ])
-        genai.delete_file(uploaded.name)
+        # Upload the audio file using new SDK
+        uploaded = await asyncio.to_thread(
+            _client.files.upload,
+            file=tmp_path,
+            config=types.UploadFileConfig(mime_type=upload_mime, display_name="patient_vitals_audio")
+        )
+
+        # Wait for file to become ACTIVE (ready to use)
+        import time
+        for _ in range(10):
+            file_info = await asyncio.to_thread(_client.files.get, name=uploaded.name)
+            if file_info.state.name == "ACTIVE":
+                break
+            await asyncio.sleep(1)
+
+        prompt = (
+            "Listen to the provided Urdu or English audio carefully. "
+            "Extract the following 6 patient vitals and return ONLY a single valid raw JSON object "
+            "with exactly these keys: "
+            '{"Age": <int>, "SystolicBP": <int>, "DiastolicBP": <int>, '
+            '"BS": <float>, "BodyTemp": <float>, "HeartRate": <int>}. '
+            "Do not include any explanation, markdown, or extra text. Return ONLY the JSON."
+        )
+
+        # Pass the uploaded file object directly — correct way in google-genai v2
+        response = await asyncio.to_thread(
+            _client.models.generate_content,
+            model=AUDIO_MODEL,
+            contents=[uploaded, prompt]
+        )
+
+        # Clean up uploaded file
+        await asyncio.to_thread(_client.files.delete, name=uploaded.name)
+
+    except Exception as exc:
+        raise ValueError(f"Audio parsing failed: {exc}") from exc
     finally:
-        os.unlink(tmp_path)
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
 
     raw = response.text.strip()
-    # Strip markdown code fences if model wraps in them
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
+    try:
+        if "{" in raw:
+            start = raw.find("{")
+            end = raw.rfind("}")
+            if start != -1 and end != -1 and end >= start:
+                raw = raw[start:end + 1]
+        return json.loads(raw)
+    except Exception as exc:
+        raise ValueError(f"Failed to parse JSON response from model: {raw}. Error: {exc}") from exc
 
 
 async def generate_precautions(
@@ -60,10 +107,10 @@ async def generate_precautions(
     language: str = "en"
 ) -> list[str]:
     """
-    Call Gemini 1.5 Flash to produce 3-4 actionable clinical precautionary measures.
+    Call Gemini to produce 3-4 actionable clinical precautionary measures.
     language: "en" for English, "ur" for Urdu
     """
-    if not GEMINI_API_KEY:
+    if not GEMINI_API_KEY or not _client:
         return _fallback_precautions(risk_level, language)
 
     lang_instruction = (
@@ -90,18 +137,29 @@ async def generate_precautions(
         f"{lang_instruction}"
     )
 
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content(prompt)
-    raw = response.text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
+    try:
+        response = await asyncio.to_thread(
+            _client.models.generate_content,
+            model=TEXT_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+        raw = response.text.strip()
+        if "[" in raw:
+            start = raw.find("[")
+            end = raw.rfind("]")
+            if start != -1 and end != -1 and end >= start:
+                raw = raw[start:end + 1]
+        return json.loads(raw)
+    except Exception as exc:
+        print(f"[Gemini] Error generating precautions: {exc}. Falling back to static recommendations.")
+        return _fallback_precautions(risk_level, language)
 
 
 def _fallback_precautions(risk_level: str, language: str) -> list[str]:
-    """Static fallback used when Gemini API key is missing."""
+    """Static fallback used when Gemini API key is missing or call fails."""
     if language == "ur":
         if risk_level == "High Risk":
             return [

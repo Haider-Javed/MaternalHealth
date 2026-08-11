@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useLang } from "@/context/LanguageContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -26,6 +26,21 @@ export default function AssessPage() {
   const [voiceStatus, setVoiceStatus] = useState("idle");
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+
+  // Safe client-side MIME type initialization to prevent SSR ReferenceError
+  const mimeTypeRef = useRef("audio/webm");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && typeof MediaRecorder !== "undefined") {
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        mimeTypeRef.current = "audio/webm;codecs=opus";
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeTypeRef.current = "audio/mp4";
+      } else {
+        mimeTypeRef.current = "audio/webm";
+      }
+    }
+  }, []);
 
   // Results
   const [result, setResult] = useState(null);
@@ -70,7 +85,7 @@ export default function AssessPage() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      const mr = new MediaRecorder(stream, { mimeType: mimeTypeRef.current });
       chunksRef.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = handleAudioStop;
@@ -91,16 +106,25 @@ export default function AssessPage() {
   };
 
   const handleAudioStop = async () => {
-    const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+    const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current });
     const form = new FormData();
-    form.append("file", blob, "vitals.webm");
+    form.append("file", blob, mimeTypeRef.current.includes("mp4") ? "vitals.mp4" : "vitals.webm");
     try {
       const res = await fetch(`${API}/api/process-audio`, { method: "POST", body: form });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      setVitals(v => ({ ...v, ...Object.fromEntries(
-        Object.entries(data.vitals).map(([k, val]) => [k, String(val)])
-      )}));
+
+      if (data.vitals) {
+        setVitals(v => ({
+          ...v,
+          Age: data.vitals.Age !== null && data.vitals.Age !== undefined ? String(data.vitals.Age) : v.Age,
+          SystolicBP: data.vitals.SystolicBP !== null && data.vitals.SystolicBP !== undefined ? String(data.vitals.SystolicBP) : v.SystolicBP,
+          DiastolicBP: data.vitals.DiastolicBP !== null && data.vitals.DiastolicBP !== undefined ? String(data.vitals.DiastolicBP) : v.DiastolicBP,
+          BS: data.vitals.BS !== null && data.vitals.BS !== undefined ? String(data.vitals.BS) : v.BS,
+          BodyTemp: data.vitals.BodyTemp !== null && data.vitals.BodyTemp !== undefined ? String(data.vitals.BodyTemp) : v.BodyTemp,
+          HeartRate: data.vitals.HeartRate !== null && data.vitals.HeartRate !== undefined ? String(data.vitals.HeartRate) : v.HeartRate,
+        }));
+      }
     } catch (e) {
       alert(`Voice processing failed: ${e.message}`);
     } finally {
@@ -132,7 +156,6 @@ export default function AssessPage() {
       const data = await res.json();
       setResult(data);
 
-      // If high risk, get geolocation + hospitals
       if (data.risk_level === "High Risk") {
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
@@ -146,10 +169,10 @@ export default function AssessPage() {
             } catch { /* use empty */ }
             finally { setLoadingHospitals(false); }
           },
-          () => { /* geolocation denied, use fallback coords */ 
+          () => {
             setUserCoords({ lat: 33.7204, lng: 73.0576 });
             fetch(`${API}/api/nearby-hospitals?lat=33.7204&lng=73.0576`)
-              .then(r => r.json()).then(d => setHospitals(d.hospitals || [])).catch(() => {});
+              .then(r => r.json()).then(d => setHospitals(d.hospitals || [])).catch(() => { });
           }
         );
       }
@@ -177,7 +200,6 @@ export default function AssessPage() {
       dir={isRtl ? "rtl" : "ltr"}
       className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/60 to-slate-100"
     >
-      {/* Navbar */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 max-w-5xl mx-auto">
         <button
           onClick={() => router.push("/")}
@@ -194,14 +216,12 @@ export default function AssessPage() {
       </nav>
 
       <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
-        {/* ── Form Card ── */}
         {!result && (
           <div className="glass-card rounded-3xl p-8 backdrop-blur-md animate-slide-up">
             <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
               <h2 className={`text-slate-900 text-2xl font-bold ${isRtl ? "font-urdu" : ""}`}>
                 {t.form_title}
               </h2>
-              {/* Voice button */}
               <button
                 onMouseDown={startRecording}
                 onMouseUp={stopRecording}
@@ -212,8 +232,8 @@ export default function AssessPage() {
                   ${voiceStatus === "processing"
                     ? "bg-slate-200 text-slate-500 cursor-wait"
                     : isRecording
-                    ? "bg-rose-500 text-white pulse-ring"
-                    : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/10"}`}
+                      ? "bg-rose-500 text-white pulse-ring"
+                      : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/10"}`}
               >
                 {voiceStatus === "processing" ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> <span className={isRtl ? "font-urdu" : ""}>{t.voice_processing}</span></>
@@ -225,7 +245,6 @@ export default function AssessPage() {
               </button>
             </div>
 
-            {/* Vitals grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
               {FIELDS.map((f) => (
                 <div key={f}>
@@ -256,7 +275,6 @@ export default function AssessPage() {
               ))}
             </div>
 
-            {/* Action buttons */}
             <div className={`flex flex-wrap gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
               <button
                 id="submit-btn"
@@ -294,10 +312,8 @@ export default function AssessPage() {
           </div>
         )}
 
-        {/* ── Results ── */}
         {result && (
           <div className="space-y-6 animate-slide-up">
-            {/* Risk Badge */}
             <div className={`rounded-3xl p-8 border ${isHighRisk
               ? "bg-rose-500/5 border-rose-500/20 text-rose-750"
               : "bg-emerald-500/5 border-emerald-500/20 text-emerald-750"}`}>
@@ -327,7 +343,6 @@ export default function AssessPage() {
               </div>
             </div>
 
-            {/* Precautions */}
             {result.precautionary_measures.length > 0 && (
               <div className="glass-card rounded-3xl p-8">
                 <div className="flex items-center gap-3 mb-5">
@@ -350,7 +365,6 @@ export default function AssessPage() {
               </div>
             )}
 
-            {/* Hospital Map — High Risk only */}
             {isHighRisk && (
               <div className="glass-card rounded-3xl p-8">
                 <div className="flex items-center gap-3 mb-5">
