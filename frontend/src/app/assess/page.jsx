@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { useLang } from "@/context/LanguageContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import HospitalMap from "@/components/HospitalMap";
+import ReferralSlip from "@/components/ReferralSlip";
 import {
   HeartPulse, Mic, MicOff, RefreshCw, Sparkles, Loader2,
   AlertTriangle, CheckCircle, ArrowLeft, Hospital, Phone, MapPinned,
+  ShieldAlert, Activity
 } from "lucide-react";
 
 const API = "http://127.0.0.1:8000";
@@ -19,6 +21,7 @@ export default function AssessPage() {
   const router = useRouter();
 
   const [vitals, setVitals] = useState({ Age: "", SystolicBP: "", DiastolicBP: "", BS: "", BodyTemp: "", HeartRate: "" });
+  const [redFlags, setRedFlags] = useState({ vaginalBleeding: false, severeHeadache: false, facialSwelling: false });
   const [errors, setErrors] = useState({});
 
   // Voice recording
@@ -26,8 +29,6 @@ export default function AssessPage() {
   const [voiceStatus, setVoiceStatus] = useState("idle");
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
-
-  // Safe client-side MIME type initialization to prevent SSR ReferenceError
   const mimeTypeRef = useRef("audio/webm");
 
   useEffect(() => {
@@ -42,33 +43,24 @@ export default function AssessPage() {
     }
   }, []);
 
-  // Results
   const [result, setResult] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  // Hospital map
   const [hospitals, setHospitals] = useState([]);
   const [userCoords, setUserCoords] = useState(null);
   const [loadingHospitals, setLoadingHospitals] = useState(false);
 
-  // ── Label helpers ────────────────────────────────
   const fieldLabel = (f) => {
-    const labels = {
-      Age: t.age, SystolicBP: t.systolicBP, DiastolicBP: t.diastolicBP,
-      BS: t.bs, BodyTemp: t.bodyTemp, HeartRate: t.heartRate,
-    };
+    const labels = { Age: t.age, SystolicBP: t.systolicBP, DiastolicBP: t.diastolicBP, BS: t.bs, BodyTemp: t.bodyTemp, HeartRate: t.heartRate };
     return labels[f];
   };
+
   const fieldUnit = (f) => {
-    const units = {
-      Age: t.unit_age, SystolicBP: t.unit_sbp, DiastolicBP: t.unit_dbp,
-      BS: t.unit_bs, BodyTemp: t.unit_temp, HeartRate: t.unit_hr,
-    };
+    const units = { Age: t.unit_age, SystolicBP: t.unit_sbp, DiastolicBP: t.unit_dbp, BS: t.unit_bs, BodyTemp: t.unit_temp, HeartRate: t.unit_hr };
     return units[f];
   };
 
-  // ── Validation ───────────────────────────────────
   const validate = () => {
     const errs = {};
     if (!vitals.Age || +vitals.Age < 10 || +vitals.Age > 70) errs.Age = "10–70";
@@ -81,7 +73,6 @@ export default function AssessPage() {
     return Object.keys(errs).length === 0;
   };
 
-  // ── Voice Recording ──────────────────────────────
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -124,6 +115,12 @@ export default function AssessPage() {
           BodyTemp: data.vitals.BodyTemp !== null && data.vitals.BodyTemp !== undefined ? String(data.vitals.BodyTemp) : v.BodyTemp,
           HeartRate: data.vitals.HeartRate !== null && data.vitals.HeartRate !== undefined ? String(data.vitals.HeartRate) : v.HeartRate,
         }));
+
+        setRedFlags({
+          vaginalBleeding: Boolean(data.vitals.vaginal_bleeding),
+          severeHeadache: Boolean(data.vitals.severe_headache),
+          facialSwelling: Boolean(data.vitals.facial_swelling),
+        });
       }
     } catch (e) {
       alert(`Voice processing failed: ${e.message}`);
@@ -132,7 +129,6 @@ export default function AssessPage() {
     }
   };
 
-  // ── Submit ───────────────────────────────────────
   const handleSubmit = async () => {
     if (!validate()) return;
     setIsSubmitting(true);
@@ -146,6 +142,9 @@ export default function AssessPage() {
         Age: parseInt(vitals.Age), SystolicBP: parseInt(vitals.SystolicBP),
         DiastolicBP: parseInt(vitals.DiastolicBP), BS: parseFloat(vitals.BS),
         BodyTemp: parseFloat(vitals.BodyTemp), HeartRate: parseInt(vitals.HeartRate),
+        vaginal_bleeding: redFlags.vaginalBleeding,
+        severe_headache: redFlags.severeHeadache,
+        facial_swelling: redFlags.facialSwelling,
         language: lang,
       };
       const res = await fetch(`${API}/api/predict`, {
@@ -166,7 +165,7 @@ export default function AssessPage() {
               const hRes = await fetch(`${API}/api/nearby-hospitals?lat=${lat}&lng=${lng}`);
               const hData = await hRes.json();
               setHospitals(hData.hospitals || []);
-            } catch { /* use empty */ }
+            } catch { /* empty */ }
             finally { setLoadingHospitals(false); }
           },
           () => {
@@ -185,6 +184,7 @@ export default function AssessPage() {
 
   const handleReset = () => {
     setVitals({ Age: "", SystolicBP: "", DiastolicBP: "", BS: "", BodyTemp: "", HeartRate: "" });
+    setRedFlags({ vaginalBleeding: false, severeHeadache: false, facialSwelling: false });
     setErrors({});
     setResult(null);
     setHospitals([]);
@@ -194,17 +194,10 @@ export default function AssessPage() {
 
   const isHighRisk = result?.risk_level === "High Risk";
 
-  // ── UI ───────────────────────────────────────────
   return (
-    <main
-      dir={isRtl ? "rtl" : "ltr"}
-      className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/60 to-slate-100"
-    >
-      <nav className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 max-w-5xl mx-auto">
-        <button
-          onClick={() => router.push("/")}
-          className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors"
-        >
+    <main dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/60 to-slate-100 pb-16">
+      <nav className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 max-w-5xl mx-auto print:hidden">
+        <button onClick={() => router.push("/")} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors cursor-pointer">
           <ArrowLeft className={`w-4 h-4 ${isRtl ? "rotate-180" : ""}`} />
           <span className={`text-sm font-semibold ${isRtl ? "font-urdu" : ""}`}>{t.back_to_form}</span>
         </button>
@@ -219,21 +212,15 @@ export default function AssessPage() {
         {!result && (
           <div className="glass-card rounded-3xl p-8 backdrop-blur-md animate-slide-up">
             <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-              <h2 className={`text-slate-900 text-2xl font-bold ${isRtl ? "font-urdu" : ""}`}>
-                {t.form_title}
-              </h2>
+              <h2 className={`text-slate-900 text-2xl font-bold ${isRtl ? "font-urdu" : ""}`}>{t.form_title}</h2>
               <button
                 onMouseDown={startRecording}
                 onMouseUp={stopRecording}
                 onTouchStart={startRecording}
                 onTouchEnd={stopRecording}
                 disabled={voiceStatus === "processing"}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all duration-300 select-none shadow-sm
-                  ${voiceStatus === "processing"
-                    ? "bg-slate-200 text-slate-500 cursor-wait"
-                    : isRecording
-                      ? "bg-rose-500 text-white pulse-ring"
-                      : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/10"}`}
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all select-none shadow-sm cursor-pointer
+                  ${voiceStatus === "processing" ? "bg-slate-200 text-slate-500 cursor-wait" : isRecording ? "bg-rose-500 text-white pulse-ring" : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/10"}`}
               >
                 {voiceStatus === "processing" ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> <span className={isRtl ? "font-urdu" : ""}>{t.voice_processing}</span></>
@@ -249,115 +236,121 @@ export default function AssessPage() {
               {FIELDS.map((f) => (
                 <div key={f}>
                   <label className={`block text-slate-700 text-sm font-medium mb-1.5 ${isRtl ? "font-urdu text-right" : ""}`}>
-                    {fieldLabel(f)}
-                    <span className="text-slate-400 ml-1">({fieldUnit(f)})</span>
+                    {fieldLabel(f)} <span className="text-slate-400 ml-1">({fieldUnit(f)})</span>
                   </label>
                   <input
                     type="number"
                     step="any"
-                    id={`vital-${f}`}
                     value={vitals[f]}
                     onChange={(e) => {
                       setVitals(v => ({ ...v, [f]: e.target.value }));
                       setErrors(er => ({ ...er, [f]: undefined }));
                     }}
-                    className={`w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-base
-                      placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all
-                      ${errors[f]
-                        ? "border-rose-500 focus:ring-rose-500/20"
-                        : "border-slate-200 focus:ring-blue-500/20 focus:border-blue-500"}`}
+                    className={`w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-base focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${errors[f] ? "border-rose-500" : "border-slate-200"}`}
                     placeholder={fieldUnit(f)}
                   />
-                  {errors[f] && (
-                    <p className="text-rose-600 text-xs mt-1 font-medium">Valid range: {errors[f]}</p>
-                  )}
+                  {errors[f] && <p className="text-rose-600 text-xs mt-1 font-medium">Valid range: {errors[f]}</p>}
                 </div>
               ))}
             </div>
 
+            <div className="mb-8 p-5 rounded-2xl bg-rose-500/5 border border-rose-500/15">
+              <div className="flex items-center gap-2 mb-4">
+                <ShieldAlert className="w-5 h-5 text-rose-600" />
+                <h3 className={`text-slate-900 font-bold text-base ${isRtl ? "font-urdu" : ""}`}>{t.redFlagsTitle}</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <label className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 cursor-pointer">
+                  <span className={`text-sm font-semibold text-slate-800 ${isRtl ? "font-urdu" : ""}`}>{t.vaginalBleeding}</span>
+                  <input type="checkbox" checked={redFlags.vaginalBleeding} onChange={(e) => setRedFlags(rf => ({ ...rf, vaginalBleeding: e.target.checked }))} className="w-5 h-5 text-rose-600" />
+                </label>
+                <label className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 cursor-pointer">
+                  <span className={`text-sm font-semibold text-slate-800 ${isRtl ? "font-urdu" : ""}`}>{t.severeHeadache}</span>
+                  <input type="checkbox" checked={redFlags.severeHeadache} onChange={(e) => setRedFlags(rf => ({ ...rf, severeHeadache: e.target.checked }))} className="w-5 h-5 text-rose-600" />
+                </label>
+                <label className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 cursor-pointer">
+                  <span className={`text-sm font-semibold text-slate-800 ${isRtl ? "font-urdu" : ""}`}>{t.facialSwelling}</span>
+                  <input type="checkbox" checked={redFlags.facialSwelling} onChange={(e) => setRedFlags(rf => ({ ...rf, facialSwelling: e.target.checked }))} className="w-5 h-5 text-rose-600" />
+                </label>
+              </div>
+            </div>
+
             <div className={`flex flex-wrap gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
-              <button
-                id="submit-btn"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600
-                  text-white font-bold text-base shadow-lg shadow-blue-500/15
-                  hover:from-blue-500 hover:to-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed
-                  hover:scale-[1.02] active:scale-100 transition-all duration-200"
-              >
+              <button onClick={handleSubmit} disabled={isSubmitting} className="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base shadow-lg shadow-blue-500/15 cursor-pointer hover:from-blue-500 hover:to-indigo-500 disabled:opacity-60">
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 text-blue-200" />}
                 <span className={isRtl ? "font-urdu" : ""}>{t.run_assessment}</span>
               </button>
-              <button
-                onClick={() => setVitals(PRESET)}
-                className="flex items-center gap-2 px-5 py-3.5 rounded-2xl border border-slate-200
-                  text-slate-600 hover:text-slate-800 hover:border-slate-400 hover:bg-slate-50 text-sm font-medium transition-all"
-              >
+              <button onClick={() => { setVitals(PRESET); setRedFlags({ vaginalBleeding: true, severeHeadache: false, facialSwelling: false }); }} className="px-5 py-3.5 rounded-2xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium cursor-pointer">
                 <span className={isRtl ? "font-urdu" : ""}>{t.preset}</span>
               </button>
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-2 px-5 py-3.5 rounded-2xl border border-slate-200
-                  text-slate-400 hover:text-slate-600 hover:bg-slate-50/50 text-sm font-medium transition-all"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span className={isRtl ? "font-urdu" : ""}>{t.reset}</span>
+              <button onClick={handleReset} className="flex items-center gap-2 px-5 py-3.5 rounded-2xl border border-slate-200 text-slate-400 hover:bg-slate-50 text-sm font-medium cursor-pointer">
+                <RefreshCw className="w-4 h-4" /> <span className={isRtl ? "font-urdu" : ""}>{t.reset}</span>
               </button>
             </div>
-            {submitError && (
-              <div className="mt-4 p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 text-rose-700 text-sm font-medium">
-                ⚠ {submitError}
-              </div>
-            )}
+            {submitError && <div className="mt-4 p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 text-rose-700 text-sm font-medium">⚠ {submitError}</div>}
           </div>
         )}
 
         {result && (
           <div className="space-y-6 animate-slide-up">
-            <div className={`rounded-3xl p-8 border ${isHighRisk
-              ? "bg-rose-500/5 border-rose-500/20 text-rose-750"
-              : "bg-emerald-500/5 border-emerald-500/20 text-emerald-750"}`}>
+            <div className={`rounded-3xl p-8 border ${isHighRisk ? "bg-rose-500/5 border-rose-500/20" : "bg-emerald-500/5 border-emerald-500/20"}`}>
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4">
-                  {isHighRisk
-                    ? <AlertTriangle className="w-12 h-12 text-rose-600" />
-                    : <CheckCircle className="w-12 h-12 text-emerald-600" />}
+                  {isHighRisk ? <AlertTriangle className="w-12 h-12 text-rose-600" /> : <CheckCircle className="w-12 h-12 text-emerald-600" />}
                   <div>
                     <p className="text-slate-500 text-sm font-semibold">{t.result_title}</p>
                     <h3 className={`text-3xl font-black mt-1 ${isHighRisk ? "text-rose-600" : "text-emerald-600"} ${isRtl ? "font-urdu" : ""}`}>
                       {isHighRisk ? t.risk_high : t.risk_low}
                     </h3>
-                    <p className="text-slate-500 text-sm mt-1">
-                      {t.probability}: <span className="text-slate-800 font-bold">{(result.probability * 100).toFixed(1)}%</span>
-                    </p>
+                    <p className="text-slate-500 text-sm mt-1">{t.probability}: <span className="text-slate-800 font-bold">{(result.probability * 100).toFixed(1)}%</span></p>
                   </div>
                 </div>
-                <button
-                  onClick={handleReset}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200
-                    text-slate-600 hover:text-slate-800 hover:bg-slate-50 text-sm font-semibold transition-all shadow-sm bg-white"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span className={isRtl ? "font-urdu" : ""}>{t.back_to_form}</span>
+                <button onClick={handleReset} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-semibold shadow-sm bg-white cursor-pointer">
+                  <RefreshCw className="w-4 h-4" /> <span className={isRtl ? "font-urdu" : ""}>{t.back_to_form}</span>
                 </button>
               </div>
             </div>
+
+            {/* SHAP Explainable AI (XAI) Risk Contribution Breakdown */}
+            {result.feature_contributions && (
+              <div className="glass-card rounded-3xl p-8">
+                <div className="flex items-center gap-3 mb-5">
+                  <Activity className="w-6 h-6 text-indigo-600" />
+                  <h3 className={`text-slate-900 text-xl font-bold ${isRtl ? "font-urdu" : ""}`}>
+                    SHAP Explainable AI — Clinical Risk Drivers
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  {Object.entries(result.feature_contributions)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([feature, percentage]) => (
+                      <div key={feature} className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold text-slate-700">
+                          <span>{fieldLabel(feature) || feature} ({vitals[feature]} {fieldUnit(feature)})</span>
+                          <span>{percentage}% impact</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className={`h-2.5 rounded-full ${percentage > 35 ? "bg-rose-500" : percentage > 20 ? "bg-amber-500" : "bg-blue-500"}`}
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             {result.precautionary_measures.length > 0 && (
               <div className="glass-card rounded-3xl p-8">
                 <div className="flex items-center gap-3 mb-5">
                   <Sparkles className="w-6 h-6 text-blue-600" />
-                  <h3 className={`text-slate-900 text-xl font-bold ${isRtl ? "font-urdu" : ""}`}>
-                    {t.precautions_title}
-                  </h3>
+                  <h3 className={`text-slate-900 text-xl font-bold ${isRtl ? "font-urdu" : ""}`}>{t.precautions_title}</h3>
                 </div>
                 <ul className="space-y-3.5">
                   {result.precautionary_measures.map((p, i) => (
                     <li key={i} className={`flex gap-3 text-slate-700 leading-relaxed ${isRtl ? "font-urdu flex-row-reverse text-right" : ""}`}>
-                      <span className={`flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/10 text-blue-700 text-xs
-                        flex items-center justify-center font-bold mt-0.5`}>
-                        {i + 1}
-                      </span>
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/10 text-blue-700 text-xs flex items-center justify-center font-bold mt-0.5">{i + 1}</span>
                       <span className="font-medium">{p}</span>
                     </li>
                   ))}
@@ -369,9 +362,7 @@ export default function AssessPage() {
               <div className="glass-card rounded-3xl p-8">
                 <div className="flex items-center gap-3 mb-5">
                   <MapPinned className="w-6 h-6 text-rose-600" />
-                  <h3 className={`text-slate-900 text-xl font-bold ${isRtl ? "font-urdu" : ""}`}>
-                    {t.hospital_map_title}
-                  </h3>
+                  <h3 className={`text-slate-900 text-xl font-bold ${isRtl ? "font-urdu" : ""}`}>{t.hospital_map_title}</h3>
                 </div>
                 {loadingHospitals ? (
                   <div className="flex items-center gap-3 text-slate-500">
@@ -384,8 +375,7 @@ export default function AssessPage() {
                     {hospitals.length > 0 && (
                       <div className="mt-6 space-y-2">
                         {hospitals.slice(0, 5).map((h) => (
-                          <div key={h.id}
-                            className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-slate-100 shadow-sm">
+                          <div key={h.id} className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-slate-100 shadow-sm">
                             <div className="flex items-center gap-3">
                               <Hospital className="w-4 h-4 text-blue-600 flex-shrink-0" />
                               <div>
@@ -397,8 +387,7 @@ export default function AssessPage() {
                               <p className="text-blue-600 text-sm font-bold">{h.distance_km} km</p>
                               {h.phone !== "—" && (
                                 <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5 font-medium">
-                                  <Phone className="w-3 h-3 text-blue-500" />
-                                  {h.phone}
+                                  <Phone className="w-3 h-3 text-blue-500" /> {h.phone}
                                 </div>
                               )}
                             </div>
@@ -410,6 +399,10 @@ export default function AssessPage() {
                 ) : null}
               </div>
             )}
+
+            <div className="glass-card rounded-3xl p-8">
+              <ReferralSlip vitals={vitals} redFlags={redFlags} result={result} hospital={hospitals.length > 0 ? hospitals[0] : null} lang={lang} t={t} isRtl={isRtl} />
+            </div>
           </div>
         )}
       </div>

@@ -1,5 +1,5 @@
 """
-main.py — FastAPI application with CORS, routing, and all endpoints.
+main.py — FastAPI application with CORS, LangGraph multi-agent pipeline, and MCP endpoints.
 """
 import os
 import json
@@ -9,16 +9,15 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from groq import Groq
 
-from model import predict
-from gemini_service import generate_precautions
+from agent_workflow import run_triage_workflow
 from osm_service import fetch_nearby_hospitals
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 app = FastAPI(
-    title="MedTriage AI — Maternal Health API",
-    description="Bilingual Maternal Risk Triage for Lady Health Workers in Rural Pakistan",
-    version="2.0.0"
+    title="MedTriage AI — Agentic Maternal Health API",
+    description="Bilingual Multi-Agent Triage System for Lady Health Workers in Rural Pakistan",
+    version="3.0.0"
 )
 
 app.add_middleware(
@@ -29,62 +28,55 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Groq client using environment variable
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 
-# ─────────────────────────────────────────────────────────
-# Schemas
-# ─────────────────────────────────────────────────────────
 class PredictRequest(BaseModel):
-    Age: int = Field(..., ge=10, le=70, json_schema_extra={"example": 28})
-    SystolicBP: int = Field(..., ge=60, le=220, json_schema_extra={"example": 140})
-    DiastolicBP: int = Field(..., ge=40, le=140, json_schema_extra={"example": 90})
-    BS: float = Field(..., ge=3.0, le=25.0, json_schema_extra={"example": 8.5})
-    BodyTemp: float = Field(..., ge=95.0, le=106.0, json_schema_extra={"example": 98.6})
-    HeartRate: int = Field(..., ge=40, le=180, json_schema_extra={"example": 75})
+    Age: int = Field(..., ge=10, le=70)
+    SystolicBP: int = Field(..., ge=60, le=220)
+    DiastolicBP: int = Field(..., ge=40, le=140)
+    BS: float = Field(..., ge=3.0, le=25.0)
+    BodyTemp: float = Field(..., ge=95.0, le=106.0)
+    HeartRate: int = Field(..., ge=40, le=180)
+    vaginal_bleeding: bool = Field(default=False)
+    severe_headache: bool = Field(default=False)
+    facial_swelling: bool = Field(default=False)
     language: str = Field(default="en", pattern="^(en|ur)$")
 
 
-# ─────────────────────────────────────────────────────────
-# Endpoints
-# ─────────────────────────────────────────────────────────
 @app.get("/")
 def health_check():
-    return {"status": "online", "service": "MedTriage AI Backend v2"}
+    return {"status": "online", "service": "MedTriage AI Multi-Agent API v3"}
 
 
 @app.post("/api/process-audio")
 async def process_audio(file: UploadFile = File(...)):
-    """
-    Receive an audio recording, transcribe it using Groq Whisper,
-    and extract the 6 vitals as JSON using Groq Llama.
-    """
     audio_bytes = await file.read()
     filename = file.filename if file.filename else "audio.webm"
     mime_type = file.content_type if file.content_type else "audio/webm"
 
     try:
-        # 1. Transcribe audio using Groq Whisper model
         transcription = client.audio.transcriptions.create(
             file=(filename, audio_bytes, mime_type),
             model="whisper-large-v3",
-            prompt="Patient vitals: Age, SystolicBP, DiastolicBP, BS, BodyTemp, HeartRate"
+            prompt="Patient vitals: Age, SystolicBP, DiastolicBP, BS, BodyTemp, HeartRate, Vaginal Bleeding, Severe Headache, Facial Swelling"
         )
         spoken_text = transcription.text
 
-        # 2. Extract structured JSON vitals using Groq Llama model
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {
                     "role": "system",
-                    "content": "Extract patient vitals from the text into a JSON object with keys: Age (int), SystolicBP (int), DiastolicBP (int), BS (float), BodyTemp (float), HeartRate (int). If a value is missing, set it to null."
+                    "content": (
+                        "Extract patient vitals and emergency red flags from the text into a JSON object with keys: "
+                        "Age (int), SystolicBP (int), DiastolicBP (int), BS (float), BodyTemp (float), HeartRate (int), "
+                        "vaginal_bleeding (bool), severe_headache (bool), facial_swelling (bool). "
+                        "If a vital numeric value is missing, set it to null. "
+                        "Set red flag booleans to true if explicitly mentioned or implied, otherwise false."
+                    )
                 },
-                {
-                    "role": "user",
-                    "content": spoken_text
-                }
+                {"role": "user", "content": spoken_text}
             ],
             response_format={"type": "json_object"}
         )
@@ -98,32 +90,20 @@ async def process_audio(file: UploadFile = File(...)):
 
 @app.post("/api/predict")
 async def predict_risk(req: PredictRequest):
-    """
-    Run the Random Forest model on 6 vitals + call Gemini for LLM precautions.
-    Returns risk_level, probability, and precautionary_measures list.
-    """
+    """Executes the multi-agent LangGraph workflow with SHAP feature attribution."""
     try:
-        risk_level, probability = predict(
-            age=req.Age,
-            systolic_bp=req.SystolicBP,
-            diastolic_bp=req.DiastolicBP,
-            bs=req.BS,
-            body_temp=req.BodyTemp,
-            heart_rate=req.HeartRate,
-        )
+        vitals_dict = req.model_dump(exclude={"language"})
+        result_state = await run_triage_workflow(vitals_dict, req.language)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Model inference failed: {exc}")
-
-    vitals_dict = req.model_dump(exclude={"language"})
-    try:
-        precautions = await generate_precautions(risk_level, vitals_dict, req.language)
-    except Exception:
-        precautions = []
+        raise HTTPException(status_code=500, detail=f"Agentic workflow execution failed: {exc}")
 
     return {
-        "risk_level": risk_level,
-        "probability": round(probability, 4),
-        "precautionary_measures": precautions,
+        "risk_level": result_state["risk_level"],
+        "probability": round(result_state["probability"], 4),
+        "feature_contributions": result_state["feature_contributions"],
+        "precautionary_measures": result_state["precautions"],
+        "audit_passed": result_state["audit_passed"],
+        "audit_notes": result_state["audit_notes"],
     }
 
 
@@ -132,10 +112,6 @@ async def nearby_hospitals(
     lat: float = Query(..., description="Patient latitude"),
     lng: float = Query(..., description="Patient longitude"),
 ):
-    """
-    Return up to 10 hospitals within 5 km using OSM Overpass API.
-    Falls back to a hardcoded Pakistan hospital list on failure.
-    """
     try:
         hospitals = await fetch_nearby_hospitals(lat, lng)
     except Exception as exc:

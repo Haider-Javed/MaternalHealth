@@ -20,6 +20,13 @@ const en = {
   bs: "Blood Sugar",
   bodyTemp: "Body Temperature",
   heartRate: "Heart Rate",
+
+  // Red-Flag Symptoms
+  redFlagsTitle: "Emergency Red-Flag Symptoms",
+  vaginalBleeding: "Vaginal Bleeding",
+  severeHeadache: "Severe Headache / Blurred Vision",
+  facialSwelling: "Facial / Hand Swelling",
+
   voice_hold: "Hold to Speak",
   voice_listening: "Listening…",
   voice_processing: "Processing audio…",
@@ -43,6 +50,17 @@ const en = {
   unit_bs: "mmol/L",
   unit_temp: "°F",
   unit_hr: "bpm",
+
+  // Emergency Referral Slip
+  printReferral: "Print Emergency Referral Slip",
+  referralTitle: "MATERNAL EMERGENCY REFERRAL SLIP",
+  referralHeaderSubtitle: "MedTriage AI — Field Triage & Emergency Handover Report",
+  patientVitals: "Patient Vitals Summary",
+  activeRedFlags: "Active Emergency Red Flags",
+  noneReported: "None Reported",
+  recommendedFacility: "Recommended Referral Facility",
+  lhwSignature: "LHW Signature & Date",
+  dateLabel: "Date & Time",
 };
 
 const ur = {
@@ -65,6 +83,13 @@ const ur = {
   bs: "بلڈ شوگر",
   bodyTemp: "جسمانی درجہ حرارت",
   heartRate: "دل کی دھڑکن",
+
+  // Red-Flag Symptoms
+  redFlagsTitle: "ہنگامی خطرناک علامات",
+  vaginalBleeding: "خون کا بہاؤ (بلیڈنگ)",
+  severeHeadache: "شدید سر درد / نظر کی دھندلاہٹ",
+  facialSwelling: "چہرے یا ہاتھوں پر سوجن",
+
   voice_hold: "بولنے کے لیے دبائیں",
   voice_listening: "سن رہا ہے…",
   voice_processing: "آواز پر عمل ہو رہا ہے…",
@@ -88,6 +113,17 @@ const ur = {
   unit_bs: "mmol/L",
   unit_temp: "°F",
   unit_hr: "bpm",
+
+  // Emergency Referral Slip
+  printReferral: "ہنگامی ریفرل سلپ پرنٹ کریں",
+  referralTitle: "زچگی ہنگامی ریفرل فارم",
+  referralHeaderSubtitle: "میڈ ٹرائیج AI — فیلڈ ٹرائیج اور ہنگامی رپورٹ",
+  patientVitals: "مریضہ کی علامات کا خلاصہ",
+  activeRedFlags: "فعال ہنگامی خطرناک علامات",
+  noneReported: "کوئی خطرناک علامت ظاہر نہیں ہوئی",
+  recommendedFacility: "تجویز کردہ ہسپتال",
+  lhwSignature: "لیڈی ہیلتھ ورکر کے دستخط اور تاریخ",
+  dateLabel: "تاریخ اور وقت",
 };
 
 export const dictionaries = { en, ur };
