@@ -15,14 +15,14 @@ export default function Home() {
       {/* ── Navbar ─────────────────────────────────── */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center">
-            <HeartPulse className="w-6 h-6 text-blue-600 animate-pulse" />
+          <div className="w-10 h-10 rounded-xl bg-teal-600/10 border border-teal-600/20 flex items-center justify-center">
+            <HeartPulse className="w-6 h-6 text-teal-600 animate-pulse" />
           </div>
           <div>
             <h1 className={`text-slate-900 font-bold text-lg leading-none ${isRtl ? "font-urdu" : ""}`}>
               {t.appName}
             </h1>
-            <p className={`text-blue-600/80 text-xs mt-1 font-semibold ${isRtl ? "font-urdu" : ""}`}>{t.tagline}</p>
+            <p className={`text-teal-600/80 text-xs mt-1 font-semibold ${isRtl ? "font-urdu" : ""}`}>{t.tagline}</p>
           </div>
         </div>
         <LanguageToggle />
@@ -31,9 +31,9 @@ export default function Home() {
       {/* ── Hero ────────────────────────────────────── */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-16 max-w-5xl mx-auto w-full">
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-700 text-xs font-semibold mb-6 animate-slide-up">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-700 text-xs font-semibold mb-6 animate-slide-up">
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Bano Qabil Hackathon 2024</span>
+          <span>Bano Qabil Hackathon 2026</span>
         </div>
 
         <h2
@@ -58,9 +58,9 @@ export default function Home() {
           style={{ animationDelay: "0.3s" }}
         >
           {[
-            { icon: <Mic className="w-7 h-7 text-blue-600" />, title: t.step1_title, desc: t.step1_desc },
-            { icon: <Brain className="w-7 h-7 text-indigo-600" />, title: t.step2_title, desc: t.step2_desc },
-            { icon: <MapPin className="w-7 h-7 text-teal-600" />, title: t.step3_title, desc: t.step3_desc },
+            { icon: <Mic className="w-7 h-7 text-teal-600" />, title: t.step1_title, desc: t.step1_desc },
+            { icon: <Brain className="w-7 h-7 text-cyan-600" />, title: t.step2_title, desc: t.step2_desc },
+            { icon: <MapPin className="w-7 h-7 text-emerald-600" />, title: t.step3_title, desc: t.step3_desc },
           ].map((step, i) => (
             <div key={i} className="glass-card rounded-2xl p-6 text-left hover:scale-[1.02] transition-all duration-300">
               <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-4">
@@ -80,9 +80,9 @@ export default function Home() {
         <Link
           href="/assess"
           className={`inline-flex items-center gap-3 px-8 py-4 rounded-2xl
-            bg-gradient-to-r from-blue-600 to-indigo-600 text-white
-            font-bold text-lg shadow-xl shadow-blue-500/20
-            hover:from-blue-500 hover:to-indigo-500
+            bg-gradient-to-r from-teal-600 to-cyan-600 text-white
+            font-bold text-lg shadow-xl shadow-teal-500/20
+            hover:from-teal-500 hover:to-cyan-500
             hover:scale-[1.03] active:scale-100 transition-all duration-200 animate-slide-up
             ${isRtl ? "font-urdu flex-row-reverse" : ""}`}
           style={{ animationDelay: "0.4s" }}
@@ -95,7 +95,7 @@ export default function Home() {
 
       {/* ── Footer ──────────────────────────────────── */}
       <footer className="text-center pb-6 text-slate-400 text-xs">
-        MedTriage AI © 2024 · Powered by Gemini 1.5 Flash &amp; Random Forest ML
+        MedTriage AI © 2026 · Powered by Gemini 1.5 Flash &amp; Random Forest ML
       </footer>
     </main>
   );

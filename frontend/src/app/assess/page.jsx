@@ -202,7 +202,7 @@ export default function AssessPage() {
           <span className={`text-sm font-semibold ${isRtl ? "font-urdu" : ""}`}>{t.back_to_form}</span>
         </button>
         <div className="flex items-center gap-2">
-          <HeartPulse className="w-5 h-5 text-blue-600 animate-pulse" />
+          <HeartPulse className="w-5 h-5 text-teal-600 animate-pulse" />
           <span className={`text-slate-800 font-bold ${isRtl ? "font-urdu" : ""}`}>{t.appName}</span>
         </div>
         <LanguageToggle />
@@ -220,14 +220,14 @@ export default function AssessPage() {
                 onTouchEnd={stopRecording}
                 disabled={voiceStatus === "processing"}
                 className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all select-none shadow-sm cursor-pointer
-                  ${voiceStatus === "processing" ? "bg-slate-200 text-slate-500 cursor-wait" : isRecording ? "bg-rose-500 text-white pulse-ring" : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/10"}`}
+                  ${voiceStatus === "processing" ? "bg-slate-200 text-slate-500 cursor-wait" : isRecording ? "bg-rose-500 text-white pulse-ring" : "bg-teal-600 hover:bg-teal-500 text-white shadow-md shadow-teal-500/10"}`}
               >
                 {voiceStatus === "processing" ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> <span className={isRtl ? "font-urdu" : ""}>{t.voice_processing}</span></>
                 ) : isRecording ? (
                   <><MicOff className="w-4 h-4" /> <span className={isRtl ? "font-urdu" : ""}>{t.voice_listening}</span></>
                 ) : (
-                  <><Mic className="w-4 h-4 text-blue-200" /> <span className={isRtl ? "font-urdu" : ""}>{t.voice_hold}</span></>
+                  <><Mic className="w-4 h-4 text-teal-200" /> <span className={isRtl ? "font-urdu" : ""}>{t.voice_hold}</span></>
                 )}
               </button>
             </div>
@@ -246,7 +246,7 @@ export default function AssessPage() {
                       setVitals(v => ({ ...v, [f]: e.target.value }));
                       setErrors(er => ({ ...er, [f]: undefined }));
                     }}
-                    className={`w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-base focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${errors[f] ? "border-rose-500" : "border-slate-200"}`}
+                    className={`w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-base focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors[f] ? "border-rose-500" : "border-slate-200"}`}
                     placeholder={fieldUnit(f)}
                   />
                   {errors[f] && <p className="text-rose-600 text-xs mt-1 font-medium">Valid range: {errors[f]}</p>}
@@ -276,8 +276,8 @@ export default function AssessPage() {
             </div>
 
             <div className={`flex flex-wrap gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
-              <button onClick={handleSubmit} disabled={isSubmitting} className="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base shadow-lg shadow-blue-500/15 cursor-pointer hover:from-blue-500 hover:to-indigo-500 disabled:opacity-60">
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 text-blue-200" />}
+              <button onClick={handleSubmit} disabled={isSubmitting} className="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 text-white font-bold text-base shadow-lg shadow-teal-500/15 cursor-pointer hover:from-teal-500 hover:to-cyan-500 disabled:opacity-60">
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 text-teal-200" />}
                 <span className={isRtl ? "font-urdu" : ""}>{t.run_assessment}</span>
               </button>
               <button onClick={() => { setVitals(PRESET); setRedFlags({ vaginalBleeding: true, severeHeadache: false, facialSwelling: false }); }} className="px-5 py-3.5 rounded-2xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium cursor-pointer">
@@ -331,7 +331,7 @@ export default function AssessPage() {
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                           <div
-                            className={`h-2.5 rounded-full ${percentage > 35 ? "bg-rose-500" : percentage > 20 ? "bg-amber-500" : "bg-blue-500"}`}
+                            className={`h-2.5 rounded-full ${percentage > 35 ? "bg-rose-500" : percentage > 20 ? "bg-amber-500" : "bg-teal-500"}`}
                             style={{ width: `${percentage}%` }}
                           ></div>
                         </div>
@@ -344,13 +344,13 @@ export default function AssessPage() {
             {result.precautionary_measures.length > 0 && (
               <div className="glass-card rounded-3xl p-8">
                 <div className="flex items-center gap-3 mb-5">
-                  <Sparkles className="w-6 h-6 text-blue-600" />
+                  <Sparkles className="w-6 h-6 text-teal-600" />
                   <h3 className={`text-slate-900 text-xl font-bold ${isRtl ? "font-urdu" : ""}`}>{t.precautions_title}</h3>
                 </div>
                 <ul className="space-y-3.5">
                   {result.precautionary_measures.map((p, i) => (
                     <li key={i} className={`flex gap-3 text-slate-700 leading-relaxed ${isRtl ? "font-urdu flex-row-reverse text-right" : ""}`}>
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/10 text-blue-700 text-xs flex items-center justify-center font-bold mt-0.5">{i + 1}</span>
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-500/10 text-teal-700 text-xs flex items-center justify-center font-bold mt-0.5">{i + 1}</span>
                       <span className="font-medium">{p}</span>
                     </li>
                   ))}
@@ -366,7 +366,7 @@ export default function AssessPage() {
                 </div>
                 {loadingHospitals ? (
                   <div className="flex items-center gap-3 text-slate-500">
-                    <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                    <Loader2 className="w-5 h-5 animate-spin text-teal-600" />
                     <span className={isRtl ? "font-urdu" : ""}>{t.loading_hospitals}</span>
                   </div>
                 ) : userCoords ? (
@@ -377,17 +377,17 @@ export default function AssessPage() {
                         {hospitals.slice(0, 5).map((h) => (
                           <div key={h.id} className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-slate-100 shadow-sm">
                             <div className="flex items-center gap-3">
-                              <Hospital className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                              <Hospital className="w-4 h-4 text-teal-600 flex-shrink-0" />
                               <div>
                                 <p className={`text-slate-800 text-sm font-bold ${isRtl ? "font-urdu" : ""}`}>{h.name}</p>
                                 <p className="text-slate-400 text-xs font-medium">{h.type}</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-blue-600 text-sm font-bold">{h.distance_km} km</p>
+                              <p className="text-teal-600 text-sm font-bold">{h.distance_km} km</p>
                               {h.phone !== "—" && (
                                 <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5 font-medium">
-                                  <Phone className="w-3 h-3 text-blue-500" /> {h.phone}
+                                  <Phone className="w-3 h-3 text-teal-500" /> {h.phone}
                                 </div>
                               )}
                             </div>

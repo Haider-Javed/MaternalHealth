@@ -3,11 +3,16 @@
 :root {
   --font-inter: "Inter", sans-serif;
   --font-urdu: "Noto Nastaliq Urdu", serif;
+  --medical-primary: #0d9488;
+  --medical-primary-light: #14b8a6;
+  --medical-accent: #0891b2;
+  --medical-glow: rgba(13, 148, 136, 0.12);
+  --medical-surface: #f0fdfa;
 }
 
 body {
   font-family: var(--font-inter);
-  background-color: #f8fafc;
+  background-color: #f0fdfa;
   color: #0f172a;
 }
 
@@ -15,35 +20,47 @@ body {
   font-family: var(--font-urdu);
 }
 
-/* Premium Bright Medical Hero Gradient */
+/* ── Healthcare / Medical Hero Gradient ──────────── */
 .hero-gradient {
-  background: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
-              radial-gradient(circle at 90% 80%, rgba(20, 184, 166, 0.06) 0%, transparent 40%),
-              linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%);
-  background-size: 200% 200%;
+  background:
+    /* subtle medical cross pattern */
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M26 18h8v8h8v8h-8v8h-8v-8h-8v-8h8z' fill='%230d9488' fill-opacity='0.025'/%3E%3C/svg%3E"),
+    /* teal radial glow top-left */
+    radial-gradient(circle at 10% 20%, rgba(13, 148, 136, 0.10) 0%, transparent 45%),
+    /* cyan radial glow bottom-right */
+    radial-gradient(circle at 90% 80%, rgba(8, 145, 178, 0.08) 0%, transparent 45%),
+    /* emerald radial glow centre */
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 60%),
+    /* base gradient – clinical white-to-teal tint */
+    linear-gradient(160deg, #ffffff 0%, #f0fdfa 35%, #ccfbf1 70%, #e0f2fe 100%);
+  background-size: 60px 60px, 200% 200%, 200% 200%, 200% 200%, 100% 100%;
   animation: gradientShift 15s ease infinite;
 }
 
 @keyframes gradientShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0%   { background-position: 0 0, 0% 50%, 0% 50%, 0% 50%, 0 0; }
+  50%  { background-position: 0 0, 100% 50%, 100% 50%, 100% 50%, 0 0; }
+  100% { background-position: 0 0, 0% 50%, 0% 50%, 0% 50%, 0 0; }
 }
 
-/* Light Glassmorphism card - clean, clinical and premium */
+/* ── Glassmorphism card – clean, clinical, premium ── */
 .glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 10px 25px -5px rgba(2, 6, 23, 0.05), 0 8px 10px -6px rgba(2, 6, 23, 0.05);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(13, 148, 136, 0.12);
+  box-shadow:
+    0 10px 25px -5px rgba(13, 148, 136, 0.06),
+    0 8px 10px -6px rgba(13, 148, 136, 0.04);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Interactive card glow on hover */
+/* Interactive card glow – medical teal on hover */
 .glass-card:hover {
-  border-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.05);
+  border-color: rgba(13, 148, 136, 0.30);
+  box-shadow:
+    0 20px 25px -5px rgba(13, 148, 136, 0.10),
+    0 8px 10px -6px rgba(13, 148, 136, 0.06);
   transform: translateY(-2px);
 }
 
@@ -57,11 +74,11 @@ body {
   animation: pulseRing 1.2s ease-out infinite;
 }
 
-/* Pulse ring animation for voice active state (Blue) */
+/* Pulse ring animation for voice active state (Blue → Teal) */
 @keyframes pulseBlue {
-  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3); }
-  70% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.3); }
+  70% { box-shadow: 0 0 0 12px rgba(13, 148, 136, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
 }
 .pulse-blue {
   animation: pulseBlue 1.2s ease-out infinite;
