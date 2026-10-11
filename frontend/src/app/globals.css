@@ -1,100 +1,213 @@
 @import "tailwindcss";
 
 :root {
-  --font-inter: "Inter", sans-serif;
+  --font-inter: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-urdu: "Noto Nastaliq Urdu", serif;
-  --medical-primary: #0d9488;
-  --medical-primary-light: #14b8a6;
-  --medical-accent: #0891b2;
-  --medical-glow: rgba(13, 148, 136, 0.12);
-  --medical-surface: #f0fdfa;
+
+  /* Radiant Hope & Medical Palette */
+  --teal-primary: #0d9488;
+  --teal-light: #14b8a6;
+  --teal-glow: rgba(13, 148, 136, 0.25);
+
+  --emerald-hope: #10b981;
+  --emerald-light: #34d399;
+  --emerald-glow: rgba(16, 185, 129, 0.25);
+
+  --rose-danger: #f43f5e;
+  --rose-light: #fb7185;
+  --rose-glow: rgba(244, 63, 94, 0.25);
+
+  --gold-warmth: #f59e0b;
+  --cyan-accent: #06b6d4;
+
+  --bg-gradient-start: #f0fdfa;
+  --bg-gradient-mid: #ecfdf5;
+  --bg-gradient-end: #e0f2fe;
 }
 
 body {
   font-family: var(--font-inter);
   background-color: #f0fdfa;
   color: #0f172a;
+  overflow-x: hidden;
+  selection-background-color: #0d9488;
+  selection-color: #ffffff;
 }
 
 .font-urdu {
   font-family: var(--font-urdu);
+  line-height: 1.8;
 }
 
-/* ── Healthcare / Medical Hero Gradient ──────────── */
-.hero-gradient {
+/* ── Dynamic Medical Hope Animated Canvas & Mesh Background ── */
+.medical-hope-bg {
   background:
-    /* subtle medical cross pattern */
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M26 18h8v8h8v8h-8v8h-8v-8h-8v-8h8z' fill='%230d9488' fill-opacity='0.025'/%3E%3C/svg%3E"),
-    /* teal radial glow top-left */
-    radial-gradient(circle at 10% 20%, rgba(13, 148, 136, 0.10) 0%, transparent 45%),
-    /* cyan radial glow bottom-right */
-    radial-gradient(circle at 90% 80%, rgba(8, 145, 178, 0.08) 0%, transparent 45%),
-    /* emerald radial glow centre */
-    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 60%),
-    /* base gradient – clinical white-to-teal tint */
-    linear-gradient(160deg, #ffffff 0%, #f0fdfa 35%, #ccfbf1 70%, #e0f2fe 100%);
-  background-size: 60px 60px, 200% 200%, 200% 200%, 200% 200%, 100% 100%;
-  animation: gradientShift 15s ease infinite;
+    /* Glowing clinical cross grid pattern */
+    url("data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 12h8v8h8v8h-8v8h-8v-8h-8v-8h8z' fill='%230d9488' fill-opacity='0.03'/%3E%3C/svg%3E"),
+    /* Radial Hope Emerald Top Left */
+    radial-gradient(circle at 12% 15%, rgba(16, 185, 129, 0.15) 0%, transparent 42%),
+    /* Radial Cyan Top Right */
+    radial-gradient(circle at 88% 20%, rgba(6, 182, 212, 0.12) 0%, transparent 45%),
+    /* Soft Rose Vitality Glow Bottom Right */
+    radial-gradient(circle at 85% 85%, rgba(244, 63, 94, 0.08) 0%, transparent 50%),
+    /* Base Vibrant Medical Gradient */
+    linear-gradient(155deg, #ffffff 0%, #f0fdfa 40%, #d1fae5 75%, #e0f2fe 100%);
+  background-size: 48px 48px, 180% 180%, 180% 180%, 180% 180%, 100% 100%;
+  animation: bgPulseShift 18s ease-in-out infinite alternate;
 }
 
-@keyframes gradientShift {
-  0%   { background-position: 0 0, 0% 50%, 0% 50%, 0% 50%, 0 0; }
-  50%  { background-position: 0 0, 100% 50%, 100% 50%, 100% 50%, 0 0; }
-  100% { background-position: 0 0, 0% 50%, 0% 50%, 0% 50%, 0 0; }
+@keyframes bgPulseShift {
+  0%   { background-position: 0 0, 0% 0%, 100% 0%, 100% 100%, 0 0; }
+  50%  { background-position: 0 0, 50% 100%, 50% 0%, 0% 50%, 0 0; }
+  100% { background-position: 0 0, 100% 50%, 0% 100%, 50% 50%, 0 0; }
 }
 
-/* ── Glassmorphism card – clean, clinical, premium ── */
-.glass-card {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(13, 148, 136, 0.12);
+/* ── Glassmorphism Card System ── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(13, 148, 136, 0.14);
   box-shadow:
-    0 10px 25px -5px rgba(13, 148, 136, 0.06),
-    0 8px 10px -6px rgba(13, 148, 136, 0.04);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    0 12px 30px -10px rgba(13, 148, 136, 0.08),
+    0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Interactive card glow – medical teal on hover */
-.glass-card:hover {
-  border-color: rgba(13, 148, 136, 0.30);
+.glass-panel:hover {
+  border-color: rgba(13, 148, 136, 0.35);
   box-shadow:
-    0 20px 25px -5px rgba(13, 148, 136, 0.10),
-    0 8px 10px -6px rgba(13, 148, 136, 0.06);
+    0 20px 40px -12px rgba(13, 148, 136, 0.16),
+    0 8px 16px -4px rgba(13, 148, 136, 0.08);
   transform: translateY(-2px);
 }
 
-/* Pulse ring animation for recording button (Red) */
-@keyframes pulseRing {
-  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
-  70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-}
-.pulse-ring {
-  animation: pulseRing 1.2s ease-out infinite;
+.glass-card-danger {
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(244, 63, 94, 0.30);
+  box-shadow: 0 12px 30px -10px rgba(244, 63, 94, 0.18);
 }
 
-/* Pulse ring animation for voice active state (Blue → Teal) */
-@keyframes pulseBlue {
-  0% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.3); }
-  70% { box-shadow: 0 0 0 12px rgba(13, 148, 136, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
-}
-.pulse-blue {
-  animation: pulseBlue 1.2s ease-out infinite;
+.glass-card-emerald {
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(16, 185, 129, 0.30);
+  box-shadow: 0 12px 30px -10px rgba(16, 185, 129, 0.18);
 }
 
-/* Slide-up entrance */
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.animate-slide-up {
-  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+/* ── Custom Range Slider Styling ── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  outline: none;
+  transition: background 0.3s;
 }
 
-/* RTL support */
-[dir="rtl"] {
-  font-family: var(--font-urdu), var(--font-inter);
-  letter-spacing: 0;
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #0d9488;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: #0f766e;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #0d9488;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.4);
+  cursor: pointer;
+}
+
+/* Danger Slider Thumb */
+.slider-danger::-webkit-slider-thumb {
+  background: #f43f5e !important;
+  box-shadow: 0 4px 10px rgba(244, 63, 94, 0.5) !important;
+}
+
+/* ── Voice Recording Pulse Animations ── */
+@keyframes voicePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.6), 0 0 0 0 rgba(13, 148, 136, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 16px rgba(244, 63, 94, 0), 0 0 0 30px rgba(13, 148, 136, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0), 0 0 0 0 rgba(13, 148, 136, 0);
+  }
+}
+
+.voice-recording-pulse {
+  animation: voicePulse 1.4s ease-out infinite;
+}
+
+@keyframes ecgLinePulse {
+  0% { stroke-dashoffset: 1000; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.ecg-path {
+  stroke-dasharray: 1000;
+  animation: ecgLinePulse 3s linear infinite;
+}
+
+/* Dynamic Entrance Animations */
+@keyframes slideFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slide-fade-up {
+  animation: slideFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0d9488;
+}
+
+/* Print specific resets */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
 }

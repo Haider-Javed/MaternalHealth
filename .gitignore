@@ -1,1 +1,33 @@
+# Environment variables
 .env
+.env.*
+!.env.example
+
+# Python virtual environment
+venv/
+backend/venv/
+.venv/
+env/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+backend/__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+.pytest_cache/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+*.tsbuildinfo
+next-env.d.ts
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

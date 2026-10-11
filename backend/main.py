@@ -11,6 +11,7 @@ from groq import Groq
 
 from agent_workflow import run_triage_workflow
 from osm_service import fetch_nearby_hospitals
+from gemini_service import parse_audio_to_vitals
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -55,6 +56,12 @@ async def process_audio(file: UploadFile = File(...)):
     filename = file.filename if file.filename else "audio.webm"
     mime_type = file.content_type if file.content_type else "audio/webm"
 
+    if not audio_bytes or len(audio_bytes) < 500:
+        raise HTTPException(
+            status_code=400,
+            detail="Audio file is too short or empty. Minimum recording duration is 0.5 seconds."
+        )
+
     try:
         transcription = client.audio.transcriptions.create(
             file=(filename, audio_bytes, mime_type),
@@ -63,27 +70,71 @@ async def process_audio(file: UploadFile = File(...)):
         )
         spoken_text = transcription.text
 
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Extract patient vitals and emergency red flags from the text into a JSON object with keys: "
-                        "Age (int), SystolicBP (int), DiastolicBP (int), BS (float), BodyTemp (float), HeartRate (int), "
-                        "vaginal_bleeding (bool), severe_headache (bool), facial_swelling (bool). "
-                        "If a vital numeric value is missing, set it to null. "
-                        "Set red flag booleans to true if explicitly mentioned or implied, otherwise false."
-                    )
-                },
-                {"role": "user", "content": spoken_text}
-            ],
-            response_format={"type": "json_object"}
-        )
-        vitals = json.loads(completion.choices[0].message.content)
+        # List of Groq models to try in sequence for resilience against 404/rate limits
+        models_to_try = [
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.8-27b",
+            "openai/gpt-oss-20b",
+            "allam-2-7b",
+            "llama-3.1-8b-instant",
+            "llama3-70b-8192",
+            "llama-3.3-70b-versatile",
+            "mixtral-8x7b-32768"
+        ]
 
+        vitals = None
+        last_error = None
+
+        system_prompt = (
+            "Extract patient vitals and emergency red flags from the text into a single raw JSON object with keys: "
+            "Age (int), SystolicBP (int), DiastolicBP (int), BS (float), BodyTemp (float), HeartRate (int), "
+            "vaginal_bleeding (bool), severe_headache (bool), facial_swelling (bool). "
+            "If a vital numeric value is missing, set it to null. "
+            "Set red flag booleans to true if explicitly mentioned or implied, otherwise false. "
+            "Return ONLY raw JSON, no markdown formatting."
+        )
+
+        for model_name in models_to_try:
+            try:
+                completion = client.chat.completions.create(
+                    model=model_name,
+                    max_tokens=300,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": spoken_text}
+                    ]
+                )
+                content = completion.choices[0].message.content.strip()
+                # Clean potential markdown backticks
+                if "{" in content:
+                    start = content.find("{")
+                    end = content.rfind("}")
+                    if start != -1 and end != -1:
+                        content = content[start:end + 1]
+                vitals = json.loads(content)
+                if vitals:
+                    break
+            except Exception as e:
+                last_error = e
+                continue
+
+        if not vitals:
+            # Fallback to Gemini Audio Parsing if Groq models fail
+            try:
+                vitals = await parse_audio_to_vitals(audio_bytes, mime_type)
+                spoken_text = "Audio processed via Gemini Audio AI"
+            except Exception as gemini_err:
+                raise HTTPException(status_code=500, detail=f"LLM extraction failed: {last_error} / Gemini fallback: {gemini_err}")
+
+    except HTTPException:
+        raise
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Audio processing failed: {exc}")
+        # Final fallback attempt to Gemini Audio API
+        try:
+            vitals = await parse_audio_to_vitals(audio_bytes, mime_type)
+            spoken_text = "Audio processed via Gemini Audio AI"
+        except Exception:
+            raise HTTPException(status_code=422, detail=f"Audio processing failed: {exc}")
 
     return {"transcript": spoken_text, "vitals": vitals}
 
